@@ -1100,7 +1100,15 @@ impl TypedAstContext {
                     _ => return,
                 };
 
-                let new_ty = match self.ast_context.c_exprs[&e].kind {
+                let c_expr = match self.ast_context.c_exprs.get(&e) {
+                    Some(c_expr) => c_expr,
+                    None => {
+                        eprintln!("XXX bubble_expr_types {:#?}", &e);
+                        return;
+                    }
+                };
+
+                let new_ty = match c_expr.kind {
                     CExprKind::Conditional(_ty, _cond, lhs, rhs) => {
                         let lhs_type_id =
                             self.ast_context.c_exprs[&lhs].kind.get_qual_type().unwrap();

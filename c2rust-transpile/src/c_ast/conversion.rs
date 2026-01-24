@@ -948,8 +948,8 @@ impl ConversionContext {
                 }
 
                 t => panic!(
-                    "Type conversion not implemented for {:?} expecting {:?}",
-                    t, expected_ty
+                    "Type conversion not implemented for {:?} expecting {:?}\n{:#?}",
+                    t, expected_ty, ty_node
                 ),
             }
         } else {
@@ -1077,7 +1077,10 @@ impl ConversionContext {
                         Some("fallthrough") | Some("__fallthrough__") => {
                             attributes.push(Attribute::Fallthrough)
                         }
-                        Some(str) => panic!("Unknown statement attribute: {}", str),
+                        Some("loop") => {
+                            eprintln!("XXX ignoring loop attribute");
+                        }
+                        Some(str) => panic!("Unknown statement attribute: {} {:#?}", str, node),
                         None => panic!("Invalid statement attribute"),
                     };
 
