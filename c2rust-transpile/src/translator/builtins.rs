@@ -714,6 +714,40 @@ impl<'c> Translation<'c> {
             | "__builtin_rotateright32"
             | "__builtin_rotateright64" => self.convert_builtin_rotate(ctx, args, "rotate_right"),
 
+            "__atomic_thread_fence" => {
+                let fence_func = mk().abs_path_expr(vec!["std", "sync", "atomic", "fence"]);
+                let arg0 = self.convert_expr(ctx.used(), args[0], None)?;
+
+                arg0.and_then(|arg0| {
+                    let ordering =
+                        match arg0.as_ref() {
+                            Expr::Path(p) => p.path.get_ident().and_then(|ident| {
+                                match ident.to_string().as_ref() {
+                                    "__ATOMIC_ACQUIRE" => Some("Acquire"),
+                                    "__ATOMIC_ACQ_REL" => Some("AcqRel"),
+                                    "__ATOMIC_RELEASE" => Some("Release"),
+                                    "__ATOMIC_SEQ_CST" => Some("SeqCst"),
+                                    _ => None,
+                                }
+                            }),
+                            _ => None,
+                        };
+
+                    let ordering = match ordering {
+                        Some(variant) => mk().abs_path_expr(vec!["std", "sync", "atomic", "Ordering", variant]),
+                        None => panic!("unexpected arg to __atomic_thread_fence: {:?}", arg0),
+                    };
+
+                    let call_expr = mk().call_expr(fence_func, vec![ordering]);
+
+                    self.convert_side_effects_expr(
+                        ctx,
+                        WithStmts::new_val(call_expr),
+                        "Builtin is not supposed to be used",
+                    )
+                })
+            }
+
             _ => Err(format_translation_err!(
                 self.ast_context.display_loc(src_loc),
                 "Unimplemented builtin {}",
