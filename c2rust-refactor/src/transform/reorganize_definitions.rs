@@ -143,16 +143,9 @@ impl<'a, 'tcx> Reorganizer<'a, 'tcx> {
     /// Iterate through the Crate and enumerate potentential destination modules.
     fn find_destination_modules(&mut self, krate: &Crate) {
         visit_nodes(krate, |i: &Item| {
-            if let ItemKind::Mod(_, ModKind::Loaded(mod_items, _, _)) = &i.kind {
-                if !has_source_header(&i.attrs)
-                    && mod_items.iter().any(|child| {
-                        if let ItemKind::Mod(_, _) = child.kind {
-                            false
-                        } else {
-                            true
-                        }
-                    })
-                {
+            if let ItemKind::Mod(_, ModKind::Loaded(_mod_items, _, _)) = &i.kind {
+                // TODO: Why was this so broken? ModuleInfo::from_item expects a header_src attribute.
+                if has_source_header(&i.attrs) {
                     self.modules.insert(i.id, ModuleInfo::from_item(i, self.cx));
                 }
             }
