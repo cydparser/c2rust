@@ -920,11 +920,12 @@ impl<'a, 'tcx> Reorganizer<'a, 'tcx> {
                                             if target_mod == parent {
                                                 return false;
                                             } else if *ns == namespace {
-                                                panic!(
-                                                    "Conflicting imports of {:?} from {:?} and {:?}",
+                                                eprintln!(
+                                                    "Conflicting imports of {:?} from {:?} and {:?}: {:?}",
                                                     u.ident(),
                                                     target_mod,
                                                     *parent,
+                                                    (ns, namespace)
                                                 );
                                             }
                                         }
