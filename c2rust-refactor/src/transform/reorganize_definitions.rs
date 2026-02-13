@@ -1171,18 +1171,19 @@ struct SrcLoc {
 
 impl From<&Attribute> for SrcLoc {
     fn from(attr: &Attribute) -> Self {
-        let value_sym = attr
-            .value_str()
-            .expect("Expected a value for src_loc attribute");
-        let mut iter = value_sym.as_str().split(':');
-        let line: usize = iter
-            .next()
-            .and_then(|x| x.parse().ok())
-            .expect("Expected a line number in src_loc attribute");
-        let col: usize = iter
-            .next()
-            .and_then(|x| x.parse().ok())
-            .expect("Expected an column number in src_loc attribute");
+        let (line, col) = attr
+            .meta_item_list()
+            .and_then(|vec| match vec.as_slice() {
+                [NestedMetaItem::Literal(Lit {
+                    kind: LitKind::Int(line, _),
+                    ..
+                }), NestedMetaItem::Literal(Lit {
+                    kind: LitKind::Int(col, _),
+                    ..
+                })] => Some((*line as usize, *col as usize)),
+                _ => None,
+            })
+            .expect("Expected a pair of (line, column) in src_loc attribute");
         Self { line, col }
     }
 }
@@ -1691,20 +1692,25 @@ fn has_source_header(attrs: &[Attribute]) -> bool {
 
 /// Check if the `Item` has the `#[header_src = "/some/path"]` attribute
 fn parse_source_header(attrs: &[Attribute]) -> Option<(String, usize)> {
-    attrs.iter().find(|a| is_c2rust_attr(a, "header_src")).map(|attr| {
-        let value_sym = attr
-            .value_str()
-            .expect("Expected a value for header_src attribute");
-        let mut iter = value_sym.as_str().split(':');
-        let path = iter
-            .next()
-            .expect("Expected a path in header_src attribute");
-        let line: usize = iter
-            .next()
-            .and_then(|line| line.parse().ok())
-            .expect("Expected an include line number in header_src attribute");
-        (path.to_string(), line)
-    })
+    attrs
+        .iter()
+        .find(|a| is_c2rust_attr(a, "header_src"))
+        .map(|attr| {
+            let (path, line) = attr
+                .meta_item_list()
+                .and_then(|vec| match vec.as_slice() {
+                    [NestedMetaItem::Literal(Lit {
+                        kind: LitKind::Str(path, _),
+                        ..
+                    }), NestedMetaItem::Literal(Lit {
+                        kind: LitKind::Int(line, _),
+                        ..
+                    })] => Some((path.as_str().to_string(), *line as usize)),
+                    _ => None,
+                })
+                .expect("Expected a pair of (path, line) in header_src attribute");
+            (path.to_string(), line)
+        })
 }
 
 fn is_nested(tree: &UseTree) -> bool {
